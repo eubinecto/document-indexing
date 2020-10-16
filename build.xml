@@ -1,0 +1,102 @@
+<project name="COMP38211-CW_Exercise1.1" basedir="." default="main">
+
+    <property name="src.dir"     value="src" />
+    <property name="build.dir"     value="build" />
+    <property name="classes.dir" value="${build.dir}/classes" />
+    <property name="jar.dir"     value="${build.dir}/jar" />
+    <property name="lib.dir"     value="lib" />
+    <property name="script.dir"  value="etc" />
+    <property name="javadoc.dir" value="javadoc" />
+    <property name="input.dir"     value="input" />
+    <property name="output.dir"  value="output" />
+    <property name="main-class"  value="uk.ac.man.cs.comp38211.exercise.WordCount" />
+    <!-- using my local hadoop for running MapReduce jobs -->
+    <property name="hadoop-location" value="/usr/local/Cellar/hadoop/3.3.0/bin/" />
+
+    <path id="classpath">
+        <fileset dir="${lib.dir}" includes="*.jar" excludes="*.txt" />
+    </path>
+
+    <path id="lib.path.id">
+        <fileset dir="${lib.dir}" />
+    </path>
+
+    <path id="run.path.id">
+        <path refid="lib.path.id" />
+        <fileset dir="${jar.dir}" />
+    </path>
+
+    <path id="jar.id">
+        <fileset dir="${jar.dir}" />
+    </path>
+
+    <path id="application" location="${jar.dir}/${ant.project.name}.jar" />
+
+    <target name="clean">
+        <delete dir="${build.dir}" />
+        <delete dir="${script.dir}" />
+        <delete dir="${output.dir}" />
+    </target>
+
+    <target name="compile">
+        <mkdir dir="${classes.dir}" />
+        <javac includeantruntime="false" srcdir="${src.dir}" destdir="${classes.dir}" classpathref="classpath" />
+        <copy todir="${classes.dir}">
+            <fileset dir="${src.dir}" excludes="*.java" />
+        </copy>
+    </target>
+
+    <target name="jar" depends="compile">
+        <mkdir dir="${jar.dir}" />
+        <mkdir dir="${classes.dir}/${lib.dir}" />
+        <copy todir="${classes.dir}/${lib.dir}">
+                <path refid="lib.path.id" />
+        </copy>
+
+        <path id="jar.lib.path.id">
+            <fileset dir="${classes.dir}/${lib.dir}" includes="*.jar" />
+        </path>
+
+
+
+        <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main-class}" />
+                <!-- <attribute name="Class-Path" value="${manifest.classpath}" /> -->
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="javadoc" depends="jar">
+        <javadoc destdir="${javadoc.dir}" access="public" use="true" notree="false" nonavbar="false" noindex="false" splitindex="no" author="true" version="true" nodeprecatedlist="false" nodeprecated="false" classpathref="lib.path.id">
+            <fileset dir="${src.dir}">
+                <include name="*.java" />
+                <exclude name="*Test.java" />
+            </fileset>
+            <link href="http://download.oracle.com/javase/6/docs/api/" />
+            <link href="http://hadoop.apache.org/docs/r1.0.4/api/" />
+        </javadoc>
+    </target>
+
+    <target name="run" depends="main">
+
+        <pathconvert property="run.path.id" refid="run.path.id" />
+        <pathconvert property="lib.path.id" refid="lib.path.id" />
+        <pathconvert property="jar.id" refid="jar.id" />
+
+        <mkdir dir="${script.dir}" />
+        <echo file="${script.dir}/run.sh" message="#!/bin/bash${line.separator}" />
+        <echo file="${script.dir}/run.sh" message="${hadoop-location}hadoop jar ${jar.id} -D mapreduce.framework.name=local -D mapreduce.jobtracker.address=local -D fs.defaultFS=file:/// -D mapreduce.cluster.local.dir=/tmp/mapred/local -D mapreduce.cluster.temp.dir=/tmp/mapred/temp -D mapreduce.jobtracker.staging.root.dir=/tmp/mapred/staging -D mapreduce.jobtracker.system.dir=/tmp/mapred/system $1 $2 $3 $4 $5 $6 $7 $8 $9" append="true" />
+        <chmod dir="${script.dir}" perm="ugo+rx" includes="*.sh" />
+
+        <exec executable="${script.dir}/run.sh">
+            <arg value="-input ${input.dir}" />
+            <arg value="-output ${output.dir}" />
+        </exec>
+
+    </target>
+
+    <target name="main" depends="clean,jar" />
+
+</project>
+

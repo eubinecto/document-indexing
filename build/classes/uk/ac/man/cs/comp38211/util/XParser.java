@@ -1,7 +1,7 @@
-/**
- * A wrapper around the GnuParser to ignore any unrecognised options
- * 
- * @author Kristian Epps
+/*
+  A wrapper around the GnuParser to ignore any unrecognised options
+
+  @author Kristian Epps
  */
 package uk.ac.man.cs.comp38211.util;
 
@@ -17,7 +17,8 @@ public class XParser extends GnuParser
         this.ignoreUnrecognizedOption = ignoreUnrecognizedOption;
     }
 
-    @SuppressWarnings("rawtypes")
+    //redundant suppression
+    //@SuppressWarnings("rawtypes")
     @Override
     protected void processOption(final String arg, final ListIterator iter)
     {

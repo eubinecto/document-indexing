@@ -1,12 +1,12 @@
-/**
- * Basic Word Count
- * 
- * This Map Reduce program performs the most simple word count possible. 
- * For each token it finds in a file it outputs that token and the amount of
- * times it has been seen in all files.
- * 
- * @author Kristian Epps
- *  
+/*
+  Basic Word Count
+
+  This Map Reduce program performs the most simple word count possible.
+  For each token it finds in a file it outputs that token and the amount of
+  times it has been seen in all files.
+
+  @author Kristian Epps
+
  */
 package uk.ac.man.cs.comp38211.exercise;
 import java.io.IOException;
@@ -123,7 +123,7 @@ public class WordCount extends Configured implements Tool
         options.addOption(OptionBuilder.withArgName("num").hasArg()
                 .withDescription("number of reducers").create(NUM_REDUCERS));
 
-        CommandLine cmdline = null;
+        CommandLine cmdline;
         CommandLineParser parser = new XParser(true);
 
         try

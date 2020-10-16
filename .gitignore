@@ -1,0 +1,5 @@
+# ignore these would be fine..
+/bin
+/build
+/output
+/target

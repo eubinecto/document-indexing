@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -42,8 +44,7 @@ public class WordCount extends Configured implements Tool
     private static final Logger LOG = Logger.getLogger(WordCount.class);
 
     private static class MyMapper extends
-            Mapper<LongWritable, Text, Text, IntWritable>
-    {
+            Mapper<LongWritable, Text, Text, IntWritable> {
 
         // Use these objects instead of creating new ones every time
         private final static IntWritable ONE = new IntWritable(1);
@@ -53,23 +54,35 @@ public class WordCount extends Configured implements Tool
         // then outputs each token with a value of 1
         @Override
         public void map(LongWritable key, Text value, Context context)
-                throws IOException, InterruptedException
-        {
+                throws IOException, InterruptedException {
             // The line is broken up and turned into an iterator 
             String line = value.toString();
             StringTokenizer itr = new StringTokenizer(line);
             
             // While there are more tokens in the input, output with value 1
-            while (itr.hasMoreTokens())
-            {
-            	String token = itr.nextToken(); 
+            while (itr.hasMoreTokens()) {
+            	String token = itr.nextToken();
+            	//clean up the token before setting
+            	token = cleanUp(token);
                 WORD.set(token);
-                
                 // context.write() is also known as 'output' or 'emit'
+                // infrastructure will do the rest of the work for you.
                 context.write(WORD, ONE);
-            }
-        }
-    }
+            } // while
+        } // map
+
+        public String cleanUp(String token) {
+            // trim the token
+            token = token.trim();
+            // normalise to lower case
+            token = token.toLowerCase();
+            // get rid of non-alphabetic characters
+            // credit: https://stackoverflow.com/a/1805533
+            token = token.replaceAll("[^a-z]", "");
+            // return the token
+            return token;
+        }  // clean up
+    }  // static class MyMapper
 
     private static class MyReducer extends
             Reducer<Text, IntWritable, Text, IntWritable>

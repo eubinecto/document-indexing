@@ -24,3 +24,6 @@ Note: MapReduce design patterns: Book work. Refer to the slides.
 ## How should you write the report? (answers to the questions raised in the lab)
 - focus on the depth. 
 - word count matters. get rid of the questions once you are done with the answers.
+- for in-depth analysis, you must provide examples. (For both to prove something is useful
+  as well as something is not).
+  

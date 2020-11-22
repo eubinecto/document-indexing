@@ -35,10 +35,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
-import uk.ac.man.cs.comp38211.io.array.ArrayListOfLongsWritable;
 import uk.ac.man.cs.comp38211.io.array.ArrayListWritable;
-import uk.ac.man.cs.comp38211.io.pair.PairOfStrings;
-import uk.ac.man.cs.comp38211.io.pair.PairOfWritables;
 import uk.ac.man.cs.comp38211.ir.Stemmer;
 import uk.ac.man.cs.comp38211.ir.StopAnalyser;
 import uk.ac.man.cs.comp38211.util.XParser;
@@ -62,8 +59,9 @@ public class BasicInvertedIndex extends Configured implements Tool
 
         // The StopAnalyser class helps remove stop words
         @SuppressWarnings("unused")
-        private StopAnalyser stopAnalyser = new StopAnalyser();
-        
+        private final StopAnalyser stopAnalyser = new StopAnalyser();
+
+        // The tokeniser class helps split line into tokens.
         // The stem method wraps the functionality of the Stemmer
         // class, which trims extra characters from English words
         // Please refer to the Stemmer class for more comments
@@ -80,6 +78,11 @@ public class BasicInvertedIndex extends Configured implements Tool
             // return the stemmed char[] word as a string
             return s.toString();
         }
+
+        private String[] tokenise(String line){
+            //use naive tokenisation for now
+            return line.split(" ");
+        }
         
         // This method gets the name of the file the current Mapper is working
         // on
@@ -94,27 +97,64 @@ public class BasicInvertedIndex extends Configured implements Tool
         public void map(Object key, Text value, Context context)
                 throws IOException, InterruptedException
         {
-            // TODO
             // This Mapper should read in a line, convert it to a set of tokens
             // and output each token with the name of the file it was found in
-
-        }
-    }
+            // i.e. emit a term as a key and a doc_id as a value (emit (Modified term, doc_id) pairs
+            // here, note that "Object key" is a byte offset of the value.
+            // get a doc_id, for which we shall use the input file name.
+            String doc_id = ((FileSplit) context.getInputSplit()).getPath().getName();
+            // get the line
+            String line = value.toString();
+            // tokenise the line into terms
+            for (String term: tokenise(line)) {
+                // O(n), where n is the length of each line. -> could we do better than this?
+                // emit (modified_term, doc_id) pair
+                // both of them are characters
+                context.write(new Text(term), new Text(doc_id));
+            } // for loop
+        } // map
+    } // mapper
 
     public static class Reduce extends Reducer<Text, Text, Text, ArrayListWritable<Text>>
     {
-        public void reduce(
-                Text key,
-                Iterable<Text> values,
-                Context context) throws IOException, InterruptedException
-        {
-            // TODO
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            // code adapted from: https://acadgild.com/blog/building-inverted-index-mapreduce
             // This Reduce Job should take in a key and an iterable of file names
             // It should convert this iterable to a writable array list and output
             // it along with the key
-
-        }
-    }
+            // here, the key = a term
+            // values = an iterable of doc_id (file name)
+            // ideally, you would want to compute..
+            //compute term_freq & doc_freq, so that you can later use them to compute tf * idf
+            HashMap<String, Integer> term_freq = new HashMap<>();  // (doc_id -> term_freq)
+            String doc_id; // to be used in the loops
+            HashSet<String> doc_id_set = new HashSet<>(); // for getting unique set of docs for a specific term
+            ArrayListWritable<Text> postings_list =  new ArrayListWritable<>();
+            for (Text t: values) {
+                doc_id = t.toString();
+                doc_id_set.add(doc_id);
+                // add doc_ids to this first (term_freq will be added later)
+                postings_list.add(new Text(doc_id));
+                // update term_freq
+                int to_put = term_freq.getOrDefault(doc_id, 0) + 1;
+                term_freq.put(doc_id, to_put);
+                // update doc_freq
+            } // for values - O(N)
+            // sort the postings
+            Collections.sort(postings_list);
+            // update each doc_id with term_freq. (later to be used for tfidf)
+            for (int idx = 0; idx < postings_list.size(); idx++) {
+                doc_id = postings_list.get(idx).toString();
+                postings_list.set(idx, new Text(doc_id + "|" + term_freq.get(doc_id)));
+            }
+            // doc_freq is the size of the set
+            int doc_freq = doc_id_set.size();
+            // now, array list of what..? array list of (doc_id, term_freq)?
+            Text key_to_write = new Text(key.toString() + "|" + doc_freq);
+            // sort the postings
+            context.write(key_to_write, postings_list);
+        } // reduce
+    } // Reduce
 
     // Lets create an object! :)
     public BasicInvertedIndex()

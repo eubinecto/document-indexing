@@ -38,6 +38,7 @@ import org.apache.log4j.Logger;
 import uk.ac.man.cs.comp38211.io.array.ArrayListWritable;
 import uk.ac.man.cs.comp38211.ir.Stemmer;
 import uk.ac.man.cs.comp38211.ir.StopAnalyser;
+import uk.ac.man.cs.comp38211.ir.Tokeniser;
 import uk.ac.man.cs.comp38211.util.XParser;
 
 public class BasicInvertedIndex extends Configured implements Tool
@@ -66,6 +67,8 @@ public class BasicInvertedIndex extends Configured implements Tool
         // class, which trims extra characters from English words
         // Please refer to the Stemmer class for more comments
         @SuppressWarnings("unused")
+        private final Tokeniser tokeniser = new Tokeniser();
+
         private String stem(String word)
         {
             Stemmer s = new Stemmer();
@@ -79,9 +82,9 @@ public class BasicInvertedIndex extends Configured implements Tool
             return s.toString();
         }
 
-        private String[] tokenise(String line){
+        private ArrayList<String> tokenise(String line){
             //use naive tokenisation for now
-            return line.split(" ");
+            return tokeniser.tokenise(line);
         }
         
         // This method gets the name of the file the current Mapper is working
@@ -97,12 +100,12 @@ public class BasicInvertedIndex extends Configured implements Tool
         public void map(Object key, Text value, Context context)
                 throws IOException, InterruptedException
         {
+            TOKEN.clear();
             // This Mapper should read in a line, convert it to a set of tokens
             // and output each token with the name of the file it was found in
             // i.e. emit a term as a key and a doc_id as a value (emit (Modified term, doc_id) pairs
             // here, note that "Object key" is a byte offset of the value.
             // get a doc_id, for which we shall use the input file name.
-            String doc_id = ((FileSplit) context.getInputSplit()).getPath().getName();
             // get the line
             String line = value.toString();
             // tokenise the line into terms
@@ -110,13 +113,28 @@ public class BasicInvertedIndex extends Configured implements Tool
                 // O(n), where n is the length of each line. -> could we do better than this?
                 // emit (modified_term, doc_id) pair
                 // both of them are characters
-                context.write(new Text(term), new Text(doc_id));
+                TOKEN.set(term);
+                context.write(TOKEN, INPUTFILE);
             } // for loop
         } // map
     } // mapper
 
     public static class Reduce extends Reducer<Text, Text, Text, ArrayListWritable<Text>>
     {
+        // TERM_FREQ should be set to the current term freq for a given doc
+        private final static HashMap<String, Integer> TERM_FREQ = new HashMap<>();
+
+        // POSTINGS_LIST should be set to the current posting list for a given term
+        private final static ArrayListWritable<Text> POSTINGS_LIST = new ArrayListWritable<>();
+
+        // DOC_ID_SET should be set to the current set of unique doc ids for a given term
+        // this is needed to compute DOC_FREQ
+        private final static HashSet<String> DOC_ID_SET = new HashSet<>();
+
+        //TOKEN_WITH_DOC_FREQ
+        private final static Text TOKEN_WITH_DOC_FREQ = new Text();
+
+
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             // code adapted from: https://acadgild.com/blog/building-inverted-index-mapreduce
             // This Reduce Job should take in a key and an iterable of file names
@@ -126,33 +144,39 @@ public class BasicInvertedIndex extends Configured implements Tool
             // values = an iterable of doc_id (file name)
             // ideally, you would want to compute..
             //compute term_freq & doc_freq, so that you can later use them to compute tf * idf
-            HashMap<String, Integer> term_freq = new HashMap<>();  // (doc_id -> term_freq)
-            String doc_id; // to be used in the loops
-            HashSet<String> doc_id_set = new HashSet<>(); // for getting unique set of docs for a specific term
-            ArrayListWritable<Text> postings_list =  new ArrayListWritable<>();
+            // clear all the static variables
+            TERM_FREQ.clear();
+            POSTINGS_LIST.clear();
+            DOC_ID_SET.clear();
+            TOKEN_WITH_DOC_FREQ.clear();
+
+            // iterate over file names
+            //DOC_ID - just an alias for the current file name. to be used when iterating over values
+            String DOC_ID;
             for (Text t: values) {
-                doc_id = t.toString();
-                doc_id_set.add(doc_id);
+                DOC_ID = t.toString();
+                DOC_ID_SET.add(DOC_ID);
                 // add doc_ids to this first (term_freq will be added later)
-                postings_list.add(new Text(doc_id));
+                POSTINGS_LIST.add(new Text(DOC_ID));
                 // update term_freq
-                int to_put = term_freq.getOrDefault(doc_id, 0) + 1;
-                term_freq.put(doc_id, to_put);
+                TERM_FREQ.put(DOC_ID, TERM_FREQ.getOrDefault(DOC_ID, 0) + 1);
                 // update doc_freq
             } // for values - O(N)
             // sort the postings
-            Collections.sort(postings_list);
+            Collections.sort(POSTINGS_LIST);
             // update each doc_id with term_freq. (later to be used for tfidf)
-            for (int idx = 0; idx < postings_list.size(); idx++) {
-                doc_id = postings_list.get(idx).toString();
-                postings_list.set(idx, new Text(doc_id + "|" + term_freq.get(doc_id)));
+            for (int idx = 0; idx < POSTINGS_LIST.size(); idx++) {
+                DOC_ID = POSTINGS_LIST.get(idx).toString();
+                POSTINGS_LIST.set(idx, new Text(DOC_ID + "|"
+                                                + TERM_FREQ.get(DOC_ID)));
             }
             // doc_freq is the size of the set
-            int doc_freq = doc_id_set.size();
+            // DOC_FREQ should be set to the current document freq for a given term
+            int DOC_FREQ = DOC_ID_SET.size();
             // now, array list of what..? array list of (doc_id, term_freq)?
-            Text key_to_write = new Text(key.toString() + "|" + doc_freq);
+            TOKEN_WITH_DOC_FREQ.set(key.toString() + "|" + DOC_FREQ);
             // sort the postings
-            context.write(key_to_write, postings_list);
+            context.write(TOKEN_WITH_DOC_FREQ, POSTINGS_LIST);
         } // reduce
     } // Reduce
 

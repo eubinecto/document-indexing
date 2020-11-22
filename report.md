@@ -27,3 +27,4 @@ Note: MapReduce design patterns: Book work. Refer to the slides.
 - for in-depth analysis, you must provide examples. (For both to prove something is useful
   as well as something is not).
   
+come up with a motivation for every feature you put in. Don't forget to be critical.

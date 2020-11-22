@@ -36,70 +36,38 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
 import uk.ac.man.cs.comp38211.io.array.ArrayListWritable;
-import uk.ac.man.cs.comp38211.ir.Stemmer;
-import uk.ac.man.cs.comp38211.ir.StopAnalyser;
 import uk.ac.man.cs.comp38211.ir.Tokeniser;
 import uk.ac.man.cs.comp38211.util.XParser;
 
-public class BasicInvertedIndex extends Configured implements Tool
-{
+public class BasicInvertedIndex extends Configured implements Tool {
     private static final Logger LOG = Logger
             .getLogger(BasicInvertedIndex.class);
 
     public static class Map extends 
-            Mapper<Object, Text, Text, Text>
-    {
+            Mapper<Object, Text, Text, Text> {
 
         // INPUTFILE holds the name of the current file
-        private final static Text INPUTFILE = new Text();
-        
+        private final static Text INPUT_FILE = new Text();
         // TOKEN should be set to the current token rather than creating a 
         // new Text object for each one
-        @SuppressWarnings("unused")
         private final static Text TOKEN = new Text();
-
-        // The StopAnalyser class helps remove stop words
-        @SuppressWarnings("unused")
-        private final StopAnalyser stopAnalyser = new StopAnalyser();
-
-        // The tokeniser class helps split line into tokens.
-        // The stem method wraps the functionality of the Stemmer
-        // class, which trims extra characters from English words
-        // Please refer to the Stemmer class for more comments
-        @SuppressWarnings("unused")
-        private final Tokeniser tokeniser = new Tokeniser();
-
-        private String stem(String word)
-        {
-            Stemmer s = new Stemmer();
-
-            // A char[] word is added to the stemmer with its length,
-            // then stemmed
-            s.add(word.toCharArray(), word.length());
-            s.stem();
-
-            // return the stemmed char[] word as a string
-            return s.toString();
-        }
 
         private ArrayList<String> tokenise(String line){
             //use naive tokenisation for now
-            return tokeniser.tokenise(line);
+            return Tokeniser.tokenise(line);
         }
         
         // This method gets the name of the file the current Mapper is working
         // on
         @Override
-        public void setup(Context context)
-        {
+        public void setup(Context context) {
             String inputFilePath = ((FileSplit) context.getInputSplit()).getPath().toString();
             String[] pathComponents = inputFilePath.split("/");
-            INPUTFILE.set(pathComponents[pathComponents.length - 1]);
+            INPUT_FILE.set(pathComponents[pathComponents.length - 1]);
         }
 
         public void map(Object key, Text value, Context context)
-                throws IOException, InterruptedException
-        {
+                throws IOException, InterruptedException {
             TOKEN.clear();
             // This Mapper should read in a line, convert it to a set of tokens
             // and output each token with the name of the file it was found in
@@ -114,26 +82,21 @@ public class BasicInvertedIndex extends Configured implements Tool
                 // emit (modified_term, doc_id) pair
                 // both of them are characters
                 TOKEN.set(term);
-                context.write(TOKEN, INPUTFILE);
+                context.write(TOKEN, INPUT_FILE);
             } // for loop
         } // map
     } // mapper
 
-    public static class Reduce extends Reducer<Text, Text, Text, ArrayListWritable<Text>>
-    {
+    public static class Reduce extends Reducer<Text, Text, Text, ArrayListWritable<Text>> {
         // TERM_FREQ should be set to the current term freq for a given doc
         private final static HashMap<String, Integer> TERM_FREQ = new HashMap<>();
-
         // POSTINGS_LIST should be set to the current posting list for a given term
         private final static ArrayListWritable<Text> POSTINGS_LIST = new ArrayListWritable<>();
-
         // DOC_ID_SET should be set to the current set of unique doc ids for a given term
         // this is needed to compute DOC_FREQ
         private final static HashSet<String> DOC_ID_SET = new HashSet<>();
-
         //TOKEN_WITH_DOC_FREQ
         private final static Text TOKEN_WITH_DOC_FREQ = new Text();
-
 
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             // code adapted from: https://acadgild.com/blog/building-inverted-index-mapreduce
@@ -144,7 +107,7 @@ public class BasicInvertedIndex extends Configured implements Tool
             // values = an iterable of doc_id (file name)
             // ideally, you would want to compute..
             //compute term_freq & doc_freq, so that you can later use them to compute tf * idf
-            // clear all the static variables
+            // clear all the static variables before start.
             TERM_FREQ.clear();
             POSTINGS_LIST.clear();
             DOC_ID_SET.clear();
@@ -181,9 +144,7 @@ public class BasicInvertedIndex extends Configured implements Tool
     } // Reduce
 
     // Lets create an object! :)
-    public BasicInvertedIndex()
-    {
-    }
+    public BasicInvertedIndex() { }
 
     // Variables to hold cmd line args
     private static final String INPUT = "input";
@@ -191,8 +152,7 @@ public class BasicInvertedIndex extends Configured implements Tool
     private static final String NUM_REDUCERS = "numReducers";
 
     @SuppressWarnings({ "static-access" })
-    public int run(String[] args) throws Exception
-    {
+    public int run(String[] args) throws Exception {
         
         // Handle command line args
         Options options = new Options();
@@ -206,12 +166,10 @@ public class BasicInvertedIndex extends Configured implements Tool
         CommandLine cmdline = null;
         CommandLineParser parser = new XParser(true);
 
-        try
-        {
+        try {
             cmdline = parser.parse(options, args);
         }
-        catch (ParseException exp)
-        {
+        catch (ParseException exp) {
             System.err.println("Error parsing command line: "
                     + exp.getMessage());
             System.err.println(cmdline);
@@ -219,8 +177,7 @@ public class BasicInvertedIndex extends Configured implements Tool
         }
 
         // If we are missing the input or output flag, let the user know
-        if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT))
-        {
+        if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT)) {
             System.out.println("args: " + Arrays.toString(args));
             HelpFormatter formatter = new HelpFormatter();
             formatter.setWidth(120);
@@ -266,8 +223,7 @@ public class BasicInvertedIndex extends Configured implements Tool
         return 0;
     }
 
-    public static void main(String[] args) throws Exception
-    {
+    public static void main(String[] args) throws Exception {
         ToolRunner.run(new BasicInvertedIndex(), args);
-    }
-}
+    } //  main
+} // BasicInvertedIndex

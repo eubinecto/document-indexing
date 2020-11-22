@@ -90,29 +90,28 @@ public class BasicInvertedIndex extends Configured implements Tool
             String[] pathComponents = inputFilePath.split("/");
             INPUTFILE.set(pathComponents[pathComponents.length - 1]);
         }
-         
-        // TODO
-        // This Mapper should read in a line, convert it to a set of tokens
-        // and output each token with the name of the file it was found in
+
         public void map(Object key, Text value, Context context)
                 throws IOException, InterruptedException
         {
+            // TODO
+            // This Mapper should read in a line, convert it to a set of tokens
+            // and output each token with the name of the file it was found in
 
         }
     }
 
     public static class Reduce extends Reducer<Text, Text, Text, ArrayListWritable<Text>>
     {
-
-        // TODO
-        // This Reduce Job should take in a key and an iterable of file names
-        // It should convert this iterable to a writable array list and output
-        // it along with the key
         public void reduce(
                 Text key,
                 Iterable<Text> values,
                 Context context) throws IOException, InterruptedException
         {
+            // TODO
+            // This Reduce Job should take in a key and an iterable of file names
+            // It should convert this iterable to a writable array list and output
+            // it along with the key
 
         }
     }

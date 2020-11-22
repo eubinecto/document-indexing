@@ -1,13 +1,14 @@
-/*
-  A wrapper around the GnuParser to ignore any unrecognised options
-
-  @author Kristian Epps
- */
 package uk.ac.man.cs.comp38211.util;
 
 import java.util.ListIterator;
+
 import org.apache.commons.cli.GnuParser;
 
+/*
+ * A wrapper around the GnuParser to ignore any unrecognised options
+ * 
+ * @author Kristian Epps
+ */
 public class XParser extends GnuParser
 {
     private boolean ignoreUnrecognizedOption;
@@ -17,8 +18,7 @@ public class XParser extends GnuParser
         this.ignoreUnrecognizedOption = ignoreUnrecognizedOption;
     }
 
-    //redundant suppression
-    //@SuppressWarnings("rawtypes")
+    @SuppressWarnings("rawtypes")
     @Override
     protected void processOption(final String arg, final ListIterator iter)
     {

@@ -12,7 +12,7 @@
 	<property name="output.dir"  value="output" />
 	
 	<property name="main-class"	 value="uk.ac.man.cs.comp38211.exercise.BasicInvertedIndex" />
-	
+	<!-- using my local hadoop. Make sure to change this back to /opt/hadoop/bin before submission -->
 	<property name="hadoop-location" value="/usr/local/Cellar/hadoop/3.3.0/bin/"/>
 	
     <path id="classpath">

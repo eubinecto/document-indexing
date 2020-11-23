@@ -52,6 +52,10 @@ public class BasicInvertedIndex extends Configured implements Tool {
         // new Text object for each one
         private final static Text TOKEN = new Text();
 
+        private final static Text VALUE = new Text();
+        // to be used for in-mapper aggregation
+        private final static HashMap<String, Integer> LINE_TERM_FREQ = new HashMap<>();
+
         private ArrayList<String> tokenise(String line){
             //use naive tokenisation for now
             return Tokeniser.tokenise(line);
@@ -68,7 +72,10 @@ public class BasicInvertedIndex extends Configured implements Tool {
 
         public void map(Object key, Text value, Context context)
                 throws IOException, InterruptedException {
+            // clear the helper variables
             TOKEN.clear();
+            VALUE.clear();
+            LINE_TERM_FREQ.clear();
             // This Mapper should read in a line, convert it to a set of tokens
             // and output each token with the name of the file it was found in
             // i.e. emit a term as a key and a doc_id as a value (emit (Modified term, doc_id) pairs
@@ -78,12 +85,16 @@ public class BasicInvertedIndex extends Configured implements Tool {
             String line = value.toString();
             // tokenise the line into terms
             for (String term: tokenise(line)) {
-                // O(n), where n is the length of each line. -> could we do better than this?
-                // emit (modified_term, doc_id) pair
-                // both of them are characters
-                TOKEN.set(term);
-                context.write(TOKEN, INPUT_FILE);
-            } // for loop
+                // apply summarizer pattern here.
+                LINE_TERM_FREQ.put(term, LINE_TERM_FREQ.getOrDefault(term, 0) + 1);
+            } // for each tokenized term
+            //helper variable
+            for (java.util.Map.Entry<String, Integer> entry : LINE_TERM_FREQ.entrySet()){
+                TOKEN.set(entry.getKey());
+                // line term frequency is counted here
+                VALUE.set(INPUT_FILE.toString() + "|" + entry.getValue());
+                context.write(TOKEN, VALUE);
+            } // for each line term freq
         } // map
     } // mapper
 
@@ -112,26 +123,32 @@ public class BasicInvertedIndex extends Configured implements Tool {
             POSTINGS_LIST.clear();
             DOC_ID_SET.clear();
             TOKEN_WITH_DOC_FREQ.clear();
-
             // iterate over file names
             //DOC_ID - just an alias for the current file name. to be used when iterating over values
-            String DOC_ID;
+            String doc_id;
+            int line_term_freq;
+            String[] doc_id_with_line_term_freq;
             for (Text t: values) {
-                DOC_ID = t.toString();
-                DOC_ID_SET.add(DOC_ID);
+                // escaping a character in java
+                // https://www.baeldung.com/java-regexp-escape-char
+                doc_id_with_line_term_freq = t.toString().split("\\Q|\\E");
+                // extract doc_id and line term freq precomputed by mappers
+                doc_id = doc_id_with_line_term_freq[0];
+                line_term_freq = Integer.parseInt(doc_id_with_line_term_freq[1]);
+                DOC_ID_SET.add(doc_id);
                 // add doc_ids to this first (term_freq will be added later)
-                POSTINGS_LIST.add(new Text(DOC_ID));
+                POSTINGS_LIST.add(new Text(doc_id));
                 // update term_freq
-                TERM_FREQ.put(DOC_ID, TERM_FREQ.getOrDefault(DOC_ID, 0) + 1);
+                TERM_FREQ.put(doc_id, TERM_FREQ.getOrDefault(doc_id, 0) + line_term_freq);
                 // update doc_freq
             } // for values - O(N)
             // sort the postings
             Collections.sort(POSTINGS_LIST);
             // update each doc_id with term_freq. (later to be used for tfidf)
             for (int idx = 0; idx < POSTINGS_LIST.size(); idx++) {
-                DOC_ID = POSTINGS_LIST.get(idx).toString();
-                POSTINGS_LIST.set(idx, new Text(DOC_ID + "|"
-                                                + TERM_FREQ.get(DOC_ID)));
+                doc_id = POSTINGS_LIST.get(idx).toString();
+                POSTINGS_LIST.set(idx, new Text(doc_id + "|"
+                                                + TERM_FREQ.get(doc_id)));
             }
             // doc_freq is the size of the set
             // DOC_FREQ should be set to the current document freq for a given term

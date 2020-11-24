@@ -31,8 +31,8 @@ might want to find books by their ISBNs, or jump into a specific page in a book.
 
 
  Computation of **Term Frequency (TF) and Document Frequency (DF)** is implemented in line 281 and 320 of the code, respectively. They are needed to compute TF-IDF weights
-  for each term according to the formula in *Figure 3*. TF-IDF weights help us measure the significance of the terms 
-  in relation to the documents where they appear. Take the index shown in `Figure 2` for example; `air` has higher DF than
+  for each term according to the formula in *Figure 2*. TF-IDF weights help us measure the significance of the terms 
+  in relation to the documents where they appear. Take the index shown in `Figure 1` for example; `air` has higher DF than
    the other two terms while its TF being nearly identical to those of the others.
     Since TF-IDF is inversely proportional to DF (DF is the denominator of the input to a monotonically increasing logarithm),
      we can see that `air` holds less significance in `Bart_the_Fink.txt.gz` than `allow` or `alter` does. 
@@ -40,10 +40,10 @@ might want to find books by their ISBNs, or jump into a specific page in a book.
 
 **Positional Indexing** is implemented in line 205-221 of the code, which utilises an instance of `Counter` to keep 
 track of term positions. A Positional Index specifies (Manning, et al., 2008) the positions at which
- terms appear in their postings. For example, *Figure 2* above shows the positional index for `allow`; 
+ terms appear in their postings. For example, *Figure 1* above shows the positional index for `allow`; 
  the term appears at 423rd, 548th and 603rd positions in the document `Bart_the_Fink.txt.gz`.
    Such Explicit specification of term positions is useful for an efficient proximity search.
-   For instance, if we were to search for "allow to alter" on the positional indices above (*Figure 2*),
+   For instance, if we were to search for "allow to alter" on the positional indices above (*Figure 1*),
 we can use them to efficiently work out that the two terms appear closer in `Bart_the_Fink.txt.gz` than in
  `Bart_the_Lover.txt.gz` (782 - 603 = 179 < 581 - 329 = 252), and that the former should be more relevant to the query than
  the latter.
@@ -73,7 +73,7 @@ Although this largely helps make the index more dense, thus reducing its size as
 
 
 **In-mapper Aggregation pattern**, where aggregation of values takes place (Paton et al., 2020) in Mappers, is used in the code.
- As *Figure 4* illustrates, adopting the pattern has led to an increase in the performance. This is because 
+ As *Figure 3* illustrates, adopting the pattern has led to an increase in the performance. This is because 
  aggregating intermediate TF's and Positional Indices inside Mappers alleviated the bottleneck caused by
   fewer Reducers being available than they are needed. However, it should be noted that this would not have been 
   the case if there existed numerous duplicated terms in each file split. Consider an extreme case where all the file splits

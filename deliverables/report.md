@@ -4,19 +4,12 @@
 - word count : 834 (assume 100 less words)
 
 ## Functionality
-### Tokenisation & case folding
-  - selective folding -> I'm not doing this, no.
-     - pros: ??? when would you need this though? when would you not want to lower all cases? 
-  - lowering all cases (both for index and query)
-    - pros: Start of the sentence, in the middle of the sentence -> can normalise them, and this is useful for
-      (e.g. stopwords removal)
-    - cons: Cannot disambiguate Proper noun from noun. (Can I come up with an example? or maybe a search example?)
-      an example ->  " I went to New York". "I bought a new phone".  you cannot disambiguate New from new. 
-      - e.g. CAT vs. cat. Apple vs. apple. proper pronoun.. but this downside could be compensated with the relationships
-      with other query terms. 
-  - simple white space tokenisation
-    - pros: simple
-    - cons: (domain specific) there are many quotes in wikipedia entries! 
+### Case folding
+Normalising case of all terms to lowercase is implemented in line 85 of the code. Some words are in uppercase 
+only because they are used to starting a sentence (e.g. "In"  as in "In the episode, ...") , and setting all of them to lowercase 
+normalises them to match with those used in the middle of a sentence. (e.g. "in" in "... partially in response to"). One evident 
+disadvantage of this is that we can no longer disambiguate Proper Nouns from Nouns (e.g. "apple(fruit)" from "Apple(company")). 
+Yet, it should be noted that such drawbacks could be compensated with the context provided in a query (e.g. "eat apple", "apple's stock price").
 
 ### Stop-words filtering
 Stop-words filtering is implemented in line 86 and 161 of the code. Stop-words are words that occur in abundance
@@ -38,7 +31,7 @@ Stop-words filtering is implemented in line 86 and 161 of the code. Stop-words a
 Filtering out date, url, ISBN, numbers and page numbers is implemented in line 79-83 of the code. Wikipedia pages include
  in-line citations and "References" section, both of which are not worthy of indexing simply because rarely would people use
  them to search for an episode. They might be worthy if we were building an index for a book search engine however, as people
-might want to find books by an ISBN number, or jump into a specific page in a book. This illustrates that tokenisation process
+might want to find books by an ISBN number, or jump into a specific page in a book. This well illustrates that tokenisation process
  depends (Nenadic, 2020) on the domain of the data. 
 
 

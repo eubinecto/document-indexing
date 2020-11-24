@@ -1,13 +1,13 @@
 /**
  * Basic Inverted Index
- * 
+ *
  * This Map Reduce program should build an Inverted Index from a set of files.
  * Each token (the key) in a given file should reference the file it was found 
  * in. 
- * 
+ *
  * The output of the program should look like this:
  * sometoken [file001, file002, ... ]
- * 
+ *
  * @author Kristian Epps
  */
 package uk.ac.man.cs.comp38211.exercise;
@@ -167,20 +167,18 @@ public class BasicInvertedIndex extends Configured implements Tool {
         } // cleanse
     } // Tokeniser
 
-    public static class Map extends 
+    public static class Map extends
             Mapper<Object, Text, Text, Text> {
-
         // INPUTFILE holds the name of the current file
         private final static Text INPUT_FILE = new Text();
         // TOKEN should be set to the current token rather than creating a
         private final static Text TOKEN = new Text();
         // VALUE should be set to the current value
         private final static Text VALUE = new Text();
-        // to be used for in-mapper aggregation
-        private final static HashMap<String, Integer> LINE_TERM_FREQ = new HashMap<>();
-        private final static HashMap<String, ArrayList<Long>> LINE_TERM_POSITIONS = new HashMap<>();
-        // This method gets the name of the file the current Mapper is working
-        // on
+        // to be used for in-mapper aggregation (in-memory local cache)
+        private final static HashMap<String, Integer> LINE_TERM_FREQ = new HashMap<>(); // for agg. term freq
+        private final static HashMap<String, ArrayList<Long>> LINE_TERM_POSITIONS = new HashMap<>(); // for agg. pos
+        // This method gets the name of the file the current Mapper is working on
         @Override
         public void setup(Context context) {
             String inputFilePath = ((FileSplit) context.getInputSplit()).getPath().toString();
@@ -190,7 +188,7 @@ public class BasicInvertedIndex extends Configured implements Tool {
 
         public void map(Object key, Text value, Context context)
                 throws IOException, InterruptedException {
-            // clear all the static variables before we start
+            // clear all the local caches to be used from the start
             TOKEN.clear();
             VALUE.clear();
             LINE_TERM_FREQ.clear();
@@ -198,42 +196,44 @@ public class BasicInvertedIndex extends Configured implements Tool {
             // get a counter with doc_id as both the group name and counter name
             // this will be globally shared among mapper operations with the same doc id
             Counter counter = context.getCounter(INPUT_FILE.toString(), INPUT_FILE.toString());
-            String line = value.toString();
+            ArrayList<String> tokens = Tokeniser.tokenise(value.toString()); // tokenise the line
+            inMapperAggregation(tokens, counter); // execute in-mapper aggregation
+            emitAggregations(context); // emit the result of aggregations
+        } // map
+
+        public static void inMapperAggregation(ArrayList<String> tokens, Counter counter) {
             ArrayList<Long> positions;
             // tokenise the line using the predefined Singleton class
-            // ---- combiner (summarizer) pattern --- //
-            for (String term: Tokeniser.tokenise(line)) {
+            for (String term: tokens) {
+                // aggregate line term freq
+                LINE_TERM_FREQ.put(term, LINE_TERM_FREQ.getOrDefault(term, 0) + 1);
+                // aggregate line term positions
+                if (LINE_TERM_POSITIONS.containsKey(term)) {
+                    LINE_TERM_POSITIONS.get(term).add(counter.getValue());
+                }
+                else {
+                    positions = new ArrayList<>();
+                    positions.add(counter.getValue());
+                    LINE_TERM_POSITIONS.put(term, positions);
+                }
+                counter.increment(1);
+            } // for each tokenized term
+        } // inMapperAggregation
+
+        public static void emitAggregations(Context context)
+                throws IOException, InterruptedException{
+            String term;
+            int lineTermFreq;
+            for (java.util.Map.Entry<String, Integer> entry : LINE_TERM_FREQ.entrySet()){
+                term = entry.getKey();
+                lineTermFreq = entry.getValue();
                 TOKEN.set(term);
-                VALUE.set(INPUT_FILE);
+                VALUE.set(INPUT_FILE.toString() // encode doc id
+                        + "|" + lineTermFreq  // encode a summary of term freq
+                        + "|" + LINE_TERM_POSITIONS.get(term).toString()); // encode a summary of term pos
                 context.write(TOKEN, VALUE);
-            }
-//            for (String term: Tokeniser.tokenise(line)) {
-//                // apply summarizer pattern here.
-//                LINE_TERM_FREQ.put(term, LINE_TERM_FREQ.getOrDefault(term, 0) + 1);
-//                if (LINE_TERM_POSITIONS.containsKey(term)) {
-//                    LINE_TERM_POSITIONS.get(term).add(counter.getValue());
-//                }
-//                else {
-//                    positions = new ArrayList<>();
-//                    positions.add(counter.getValue());
-//                    LINE_TERM_POSITIONS.put(term, positions);
-//                }
-//                counter.increment(1);
-//            } // for each tokenized term
-//            // ---- end of combiner pattern ------- //
-//            //helper variable
-//            String term;
-//            int lineTermFreq;
-//            for (java.util.Map.Entry<String, Integer> entry : LINE_TERM_FREQ.entrySet()){
-//                term = entry.getKey();
-//                lineTermFreq = entry.getValue();
-//                TOKEN.set(term);
-//                VALUE.set(INPUT_FILE.toString() // encode doc id
-//                        + "|" + lineTermFreq  // encode a summary of term freq
-//                        + "|" + LINE_TERM_POSITIONS.get(term).toString()); // encode a summary of term pos
-//                context.write(TOKEN, VALUE);
-//            } // for each line term freq
-        } // map
+            } // for each line term freq
+        }
     } // mapper
 
     public static class Reduce extends Reducer<Text, Text, Text, ArrayListWritable<Text>> {
@@ -246,8 +246,50 @@ public class BasicInvertedIndex extends Configured implements Tool {
         // DOC_ID_SET should be set to the current set of unique doc ids for a given term
         // this is needed to compute DOC_FREQ
         private final static HashSet<String> DOC_ID_SET = new HashSet<>();
-        //TOKEN_WITH_DOC_FREQ
+        // TOKEN_WITH_DOC_FREQ
         private final static Text TOKEN_WITH_DOC_FREQ = new Text();
+
+
+        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+            // This Reduce Job should take in a key and an iterable of file names
+            // It should convert this iterable to a writable array list and output
+            // clear all the local caches on start
+            TERM_FREQ.clear();
+            TERM_POSITIONS.clear();
+            POSTINGS_LIST.clear();
+            DOC_ID_SET.clear();
+            TOKEN_WITH_DOC_FREQ.clear();
+            parseInMapperAggregations(values); // first, parse the aggregated summary and put the results in the cache
+            emitIndex(key.toString(), context); // from the cache, build inverted index and emit it
+        } // reduce
+
+        public static void parseInMapperAggregations(Iterable<Text> values){
+            String docId;
+            int lineTermFreq;
+            ArrayList<Integer> lineTermPositions;
+            String[] docIdWithSummary;
+            for (Text t: values) {
+                // escaping "|" in java.
+                // reference: https://www.baeldung.com/java-regexp-escape-char
+                docIdWithSummary = t.toString().split("\\Q|\\E");
+                // get the summaries precomputed by the combiner pattern in mapper
+                docId = docIdWithSummary[0];
+                lineTermFreq = Integer.parseInt(docIdWithSummary[1]);
+                lineTermPositions = parseLineTermPositionsStr(docIdWithSummary[2]);
+                // update unique doc id set, term freq and term positions
+                DOC_ID_SET.add(docId);
+                TERM_FREQ.put(docId, TERM_FREQ.getOrDefault(docId, 0) + lineTermFreq);
+                if (TERM_POSITIONS.containsKey(docId)) {
+                    // if it already exists, just merge into the current
+                    TERM_POSITIONS.get(docId).addAll(lineTermPositions);
+                }
+                else {
+                    // if it does not exist, add in the positions that we have
+                    TERM_POSITIONS.put(docId, lineTermPositions);
+                }
+                // update doc_freq
+            } // for values
+        } // parseInMapperAggregations
 
         private static ArrayList<Integer> parseLineTermPositionsStr(String lineTermPositionsStr) {
             // e.g.
@@ -263,59 +305,23 @@ public class BasicInvertedIndex extends Configured implements Tool {
             return LineTermPositions;
         }
 
-        public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-            // This Reduce Job should take in a key and an iterable of file names
-            // It should convert this iterable to a writable array list and output
-            // clear all the static variables before start.
-            TERM_FREQ.clear();
-            TERM_POSITIONS.clear();
-            POSTINGS_LIST.clear();
-            DOC_ID_SET.clear();
-            TOKEN_WITH_DOC_FREQ.clear();
-            String docId;
+        public static void emitIndex(String term, Context context)
+                throws IOException, InterruptedException {
             int lineTermFreq;
-            ArrayList<Integer> lineTermPositions;
-            String[] docIdWithSummary;
-            for (Text t: values) {
-                docId = t.toString();
-                TERM_FREQ.put(docId, TERM_FREQ.getOrDefault(docId, 0) + 1);
-                DOC_ID_SET.add(docId);
-//                // escaping "|" in java.
-//                // reference: https://www.baeldung.com/java-regexp-escape-char
-//                docIdWithSummary = t.toString().split("\\Q|\\E");
-//                // get the summaries precomputed by the combiner pattern in mapper
-//                docId = docIdWithSummary[0];
-//                lineTermFreq = Integer.parseInt(docIdWithSummary[1]);
-//                lineTermPositions = parseLineTermPositionsStr(docIdWithSummary[2]);
-                // update unique doc id set, term freq and term positions
-//                DOC_ID_SET.add(docId);
-//                TERM_FREQ.put(docId, TERM_FREQ.getOrDefault(docId, 0) + lineTermFreq);
-//                if (TERM_POSITIONS.containsKey(docId)) {
-//                    // if it already exists, just merge into the current
-//                    TERM_POSITIONS.get(docId).addAll(lineTermPositions);
-//                }
-//                else {
-//                    // if it does not exist, add in the positions that we have
-//                    TERM_POSITIONS.put(docId, lineTermPositions);
-//                }
-//                // update doc_freq
-            } // for values - O(N)
-            // sort the postings
-            int termFreq;
+            String docId;
             ArrayList<Integer> positionalIndex;
             for (java.util.Map.Entry<String, Integer> entry : TERM_FREQ.entrySet()) {
                 docId = entry.getKey();
-                termFreq = entry.getValue();
-                POSTINGS_LIST.add(new Text(docId + "|" + termFreq));
-//                positionalIndex = TERM_POSITIONS.get(docId);
-//                POSTINGS_LIST.add(new Text(docId + "|" + termFreq+ "|" + positionalIndex));
+                lineTermFreq = entry.getValue();
+                positionalIndex = TERM_POSITIONS.get(docId);
+                POSTINGS_LIST.add(new Text(docId + "|" + lineTermFreq+ "|" + positionalIndex));
             } // for each term freq pair
             Collections.sort(POSTINGS_LIST); // postings list must be sorted after the index is sorted by terms
             int DOC_FREQ = DOC_ID_SET.size(); // unique set of all doc ids for this term is the doc freq
-            TOKEN_WITH_DOC_FREQ.set(key.toString() + "|" + DOC_FREQ); // join the term with doc freq
+            TOKEN_WITH_DOC_FREQ.set(term + "|" + DOC_FREQ); // join the term with doc freq
             // sort the postings
             context.write(TOKEN_WITH_DOC_FREQ, POSTINGS_LIST);
-        } // reduce
+        } // emitInvertedIndex ..
     } // Reduce
 
     // Lets create an object! :)
@@ -328,7 +334,7 @@ public class BasicInvertedIndex extends Configured implements Tool {
 
     @SuppressWarnings({ "static-access" })
     public int run(String[] args) throws Exception {
-        
+
         // Handle command line args
         Options options = new Options();
         options.addOption(OptionBuilder.withArgName("path").hasArg()
@@ -373,11 +379,11 @@ public class BasicInvertedIndex extends Configured implements Tool {
         job.setJobName("Basic Inverted Index");
         job.setJarByClass(BasicInvertedIndex.class);
         job.setNumReduceTasks(reduceTasks);
-        
+
         // Set the Mapper and Reducer class (no need for combiner here)
         job.setMapperClass(Map.class);
         job.setReducerClass(Reduce.class);
-        
+
         // Set the Output Classes
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(Text.class);
@@ -387,7 +393,7 @@ public class BasicInvertedIndex extends Configured implements Tool {
         // Set the input and output file paths
         FileInputFormat.setInputPaths(job, new Path(inputPath));
         FileOutputFormat.setOutputPath(job, new Path(outputPath));
-        
+
         // Time the job whilst it is running
         long startTime = System.currentTimeMillis();
         job.waitForCompletion(true);

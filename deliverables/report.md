@@ -16,23 +16,23 @@
  them to search for an episode. However, they might be important if we were indexing for a book search engine, as then people
 might want to find books by their ISBNs, or jump into a specific page in a book. This well illustrates that tokenisation process
  depends on (Nenadic, 2020) the domain of data. 
-     
+    
+    
+> $$tf*idf_{t, d} = (1 + log_{10}tf_{t,d}) * log_{10}(N/df_{t})$$
+> *Figure 1* : The formula for TF-IDF weight of a term (Nenadic, 2020).  
      
 > ```
 > allow|2	[Bart_the_Fink.txt.gz|3|[423, 548, 603], ...]
 > alter|2	[Bart_the_Fink.txt.gz|2|[782, 967], ...]
 > air|6	[Bart_the_Fink.txt.gz|3|[147, 205, 220]
 > ```
-> *Figure 1* : Parts of the Inverted Index for the terms `allow` , `alter` and `american`.
+> *Figure 2* : Parts of the Inverted Index for the terms `allow` , `alter` and `american`.
 >  DF (next to the term), TF (next to the document) and positional indices (next to TF) are stored. 
-
-> $$tf*idf_{t, d} = (1 + log_{10}tf_{t,d}) * log_{10}(N/df_{t})$$
-> *Figure 2* : The formula for TF-IDF weight of a term (Nenadic, 2020). 
 
 
  Computation of **Term Frequency (TF) and Document Frequency (DF)** is implemented in line 281 and 320 of the code, respectively. They are needed to compute TF-IDF weights
-  for each term according to the formula in *Figure 2*. TF-IDF weights help us measure the significance of the terms 
-  in relation to the documents where they appear. Take the index shown in `Figure 1` for example; `air` has higher DF than
+  for each term according to the formula in *Figure 1*. TF-IDF weights help us measure the significance of the terms 
+  in relation to the documents where they appear. Take the index shown in *Figure 2* for example; `air` has higher DF than
    the other two terms while its TF being nearly identical to those of the others.
     Since TF-IDF is inversely proportional to DF (DF is the denominator of the input to a monotonically increasing logarithm),
      we can see that `air` holds less significance in `Bart_the_Fink.txt.gz` than `allow` or `alter` does. 
@@ -40,10 +40,10 @@ might want to find books by their ISBNs, or jump into a specific page in a book.
 
 **Positional Indexing** is implemented in line 205-221 of the code, which utilises an instance of `Counter` to keep 
 track of term positions. A Positional Index specifies (Manning, et al., 2008) the positions at which
- terms appear in their postings. For example, *Figure 1* above shows the positional index for `allow`; 
+ terms appear in their postings. For example, *Figure 2* above shows the positional index for `allow`; 
  the term appears at 423rd, 548th and 603rd positions in the document `Bart_the_Fink.txt.gz`.
-   Such Explicit specification of term positions is useful for an efficient proximity search.
-   For instance, if we were to search for "allow to alter" on the positional indices above (*Figure 1*),
+   Such explicit specification of term positions is useful for an efficient proximity search.
+   For instance, if we were to search for "allow to alter" on the positional indices above (*Figure 2*),
 we can use them to efficiently work out that the two terms appear closer in `Bart_the_Fink.txt.gz` than in
  `Bart_the_Lover.txt.gz` (782 - 603 = 179 < 581 - 329 = 252), and that the former should be more relevant to the query than
  the latter.
@@ -66,8 +66,8 @@ Although this largely helps make the index more dense, thus reducing its size as
 
 > in-mapper aggregation | time (seconds)
 > --- | --- 
-> NO | 21.782
-> YES | 22.549
+> NO | 22.549
+> YES | 21.782
 >
 > *Figure 3* : The time it took to run jobs, with and without In-mapper Aggregation
 

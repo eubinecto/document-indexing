@@ -13,7 +13,7 @@
 	
 	<property name="main-class"	 value="uk.ac.man.cs.comp38211.exercise.BasicInvertedIndex" />
 	<!-- using my local hadoop. Make sure to change this back to /opt/hadoop/bin before submission -->
-	<property name="hadoop-location" value="/usr/local/Cellar/hadoop/1.0.4/bin/"/>
+	<property name="hadoop-location" value="/Users/eubin/Downloads/hadoop-1.0.4/bin/"/>
 	
     <path id="classpath">
         <fileset dir="${lib.dir}" includes="*.jar" excludes="*.txt" />

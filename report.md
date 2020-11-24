@@ -52,7 +52,7 @@ Note: MapReduce design patterns: Book work. Refer to the slides.
 - in-mapper aggregation with summarization (aka Combiner pattern)
   - pros: overcomes the performance limitations of the previous design (what is this design called?)
   - cons: Not so much useful if there aren't that many duplicated terms in each line.
-  - without combiner: took `.... time`.
+  - without combiner: took `20/11/24 14:20:43 INFO exercise.BasicInvertedIndex: Job Finished in 22.782 seconds`.
   - with combiner: took `20/11/24 10:37:21 INFO exercise.BasicInvertedIndex: Job Finished in 22.549 seconds`
   - would be great if I could mathematically approximate the time... and then compare to how long it actually took.
   

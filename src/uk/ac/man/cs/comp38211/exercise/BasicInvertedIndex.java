@@ -203,31 +203,36 @@ public class BasicInvertedIndex extends Configured implements Tool {
             // tokenise the line using the predefined Singleton class
             // ---- combiner (summarizer) pattern --- //
             for (String term: Tokeniser.tokenise(line)) {
-                // apply summarizer pattern here.
-                LINE_TERM_FREQ.put(term, LINE_TERM_FREQ.getOrDefault(term, 0) + 1);
-                if (LINE_TERM_POSITIONS.containsKey(term)) {
-                    LINE_TERM_POSITIONS.get(term).add(counter.getValue());
-                }
-                else {
-                    positions = new ArrayList<>();
-                    positions.add(counter.getValue());
-                    LINE_TERM_POSITIONS.put(term, positions);
-                }
-                counter.increment(1);
-            } // for each tokenized term
-            // ---- end of combiner pattern ------- //
-            //helper variable
-            String term;
-            int lineTermFreq;
-            for (java.util.Map.Entry<String, Integer> entry : LINE_TERM_FREQ.entrySet()){
-                term = entry.getKey();
-                lineTermFreq = entry.getValue();
                 TOKEN.set(term);
-                VALUE.set(INPUT_FILE.toString() // encode doc id
-                        + "|" + lineTermFreq  // encode a summary of term freq
-                        + "|" + LINE_TERM_POSITIONS.get(term).toString()); // encode a summary of term pos
+                VALUE.set(INPUT_FILE);
                 context.write(TOKEN, VALUE);
-            } // for each line term freq
+            }
+//            for (String term: Tokeniser.tokenise(line)) {
+//                // apply summarizer pattern here.
+//                LINE_TERM_FREQ.put(term, LINE_TERM_FREQ.getOrDefault(term, 0) + 1);
+//                if (LINE_TERM_POSITIONS.containsKey(term)) {
+//                    LINE_TERM_POSITIONS.get(term).add(counter.getValue());
+//                }
+//                else {
+//                    positions = new ArrayList<>();
+//                    positions.add(counter.getValue());
+//                    LINE_TERM_POSITIONS.put(term, positions);
+//                }
+//                counter.increment(1);
+//            } // for each tokenized term
+//            // ---- end of combiner pattern ------- //
+//            //helper variable
+//            String term;
+//            int lineTermFreq;
+//            for (java.util.Map.Entry<String, Integer> entry : LINE_TERM_FREQ.entrySet()){
+//                term = entry.getKey();
+//                lineTermFreq = entry.getValue();
+//                TOKEN.set(term);
+//                VALUE.set(INPUT_FILE.toString() // encode doc id
+//                        + "|" + lineTermFreq  // encode a summary of term freq
+//                        + "|" + LINE_TERM_POSITIONS.get(term).toString()); // encode a summary of term pos
+//                context.write(TOKEN, VALUE);
+//            } // for each line term freq
         } // map
     } // mapper
 
@@ -272,25 +277,28 @@ public class BasicInvertedIndex extends Configured implements Tool {
             ArrayList<Integer> lineTermPositions;
             String[] docIdWithSummary;
             for (Text t: values) {
-                // escaping "|" in java.
-                // reference: https://www.baeldung.com/java-regexp-escape-char
-                docIdWithSummary = t.toString().split("\\Q|\\E");
-                // get the summaries precomputed by the combiner pattern in mapper
-                docId = docIdWithSummary[0];
-                lineTermFreq = Integer.parseInt(docIdWithSummary[1]);
-                lineTermPositions = parseLineTermPositionsStr(docIdWithSummary[2]);
-                // update unique doc id set, term freq and term positions
+                docId = t.toString();
+                TERM_FREQ.put(docId, TERM_FREQ.getOrDefault(docId, 0) + 1);
                 DOC_ID_SET.add(docId);
-                TERM_FREQ.put(docId, TERM_FREQ.getOrDefault(docId, 0) + lineTermFreq);
-                if (TERM_POSITIONS.containsKey(docId)) {
-                    // if it already exists, just merge into the current
-                    TERM_POSITIONS.get(docId).addAll(lineTermPositions);
-                }
-                else {
-                    // if it does not exist, add in the positions that we have
-                    TERM_POSITIONS.put(docId, lineTermPositions);
-                }
-                // update doc_freq
+//                // escaping "|" in java.
+//                // reference: https://www.baeldung.com/java-regexp-escape-char
+//                docIdWithSummary = t.toString().split("\\Q|\\E");
+//                // get the summaries precomputed by the combiner pattern in mapper
+//                docId = docIdWithSummary[0];
+//                lineTermFreq = Integer.parseInt(docIdWithSummary[1]);
+//                lineTermPositions = parseLineTermPositionsStr(docIdWithSummary[2]);
+                // update unique doc id set, term freq and term positions
+//                DOC_ID_SET.add(docId);
+//                TERM_FREQ.put(docId, TERM_FREQ.getOrDefault(docId, 0) + lineTermFreq);
+//                if (TERM_POSITIONS.containsKey(docId)) {
+//                    // if it already exists, just merge into the current
+//                    TERM_POSITIONS.get(docId).addAll(lineTermPositions);
+//                }
+//                else {
+//                    // if it does not exist, add in the positions that we have
+//                    TERM_POSITIONS.put(docId, lineTermPositions);
+//                }
+//                // update doc_freq
             } // for values - O(N)
             // sort the postings
             int termFreq;
@@ -298,8 +306,9 @@ public class BasicInvertedIndex extends Configured implements Tool {
             for (java.util.Map.Entry<String, Integer> entry : TERM_FREQ.entrySet()) {
                 docId = entry.getKey();
                 termFreq = entry.getValue();
-                positionalIndex = TERM_POSITIONS.get(docId);
-                POSTINGS_LIST.add(new Text(docId + "|" + termFreq+ "|" + positionalIndex));
+                POSTINGS_LIST.add(new Text(docId + "|" + termFreq));
+//                positionalIndex = TERM_POSITIONS.get(docId);
+//                POSTINGS_LIST.add(new Text(docId + "|" + termFreq+ "|" + positionalIndex));
             } // for each term freq pair
             Collections.sort(POSTINGS_LIST); // postings list must be sorted after the index is sorted by terms
             int DOC_FREQ = DOC_ID_SET.size(); // unique set of all doc ids for this term is the doc freq

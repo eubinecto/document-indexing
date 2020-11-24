@@ -1,17 +1,15 @@
 # Coursework : Document Indexing in MapReduce
 - author: Eu-Bin KIM (10327741)
 - date: 24th of November 2020
-- word count : 986
+- word count : 998
 
 ## Functionality
 
-**Stop-words filtering** is implemented in line 86 and 161 of the code. Stop-words are words that occur in abundance
- such as "my", "is" and "the". In the code, they are filtered out in the tokenisation process as
-  they rarely hold (Nenadic, 2020) semantic significance. While this might be helpful for denoising search query,
+**Stop-words filtering** is implemented in line 86 and 161 of the code. Stop-words are words that occur in abundance,
+ such as "my", "is" and "the". They are filtered out as they rarely hold (Nenadic, 2020) semantic significance. While this might help denoise search queries,
    there is a domain-specific downside to this. When people search for a particular episode, one might search for a 
    memorable quote from the episode, say, "I did mean it". However, the three terms would not be indexed
-    as all of them are listed as Stop-words in `lib/stopwords.txt`. Although none of the Simpson episode Wiki's include the quote,
-     if they did, searching the quote on the index would return nothing. 
+    as they are all listed as Stop-words in `lib/stopwords.txt`. If any of Simpson episode Wiki's contained the quote, searching the quote would return nothing. 
      
 **Domain specific filtering** - filtering out dates, urls, ISBN's, numbers and page numbers is implemented in line 79-83 of the code. Wikipedia pages include
  in-line citations and "References" section, both of which are not worthy of indexing simply because people would rarely use
@@ -25,12 +23,12 @@ might want to find books by their ISBNs, or jump into a specific page in a book.
 > alter|2	[Bart_the_Fink.txt.gz|2|[782, 967], ...]
 > air|6	[Bart_the_Fink.txt.gz|3|[147, 205, 220]
 > ```
-> *Figure 2* : Parts of the Inverted Index for the terms `allow` , `alter` and `american`.
+> *Figure 1* : Parts of the Inverted Index for the terms `allow` , `alter` and `american`.
 >  DF (next to the term), TF (next to the document) and positional indices (next to TF) are stored. 
 
-*Figure 3* : The formula for TF-IDF weight of a term (Nenadic, 2020). | 
---- |
-![](.report_images/c2855e44.png) | 
+> $$tf*idf_{t, d} = (1 + log_{10}tf_{t,d}) * log_{10}(N/df_{t})$$
+> *Figure 2* : The formula for TF-IDF weight of a term (Nenadic, 2020). 
+
 
  Computation of **Term Frequency (TF) and Document Frequency (DF)** is implemented in line 281 and 320 of the code, respectively. They are needed to compute TF-IDF weights
   for each term according to the formula in *Figure 3*. TF-IDF weights help us measure the significance of the terms 
@@ -71,7 +69,7 @@ Although this largely helps make the index more dense, thus reducing its size as
 > NO | 21.782
 > YES | 22.549
 >
-> *Figure 4* : The time it took to run jobs, with and without In-mapper Aggregation
+> *Figure 3* : The time it took to run jobs, with and without In-mapper Aggregation
 
 
 **In-mapper Aggregation pattern**, where aggregation of values takes place (Paton et al., 2020) in Mappers, is used in the code.
@@ -80,14 +78,14 @@ Although this largely helps make the index more dense, thus reducing its size as
   fewer Reducers being available than they are needed. However, it should be noted that this would not have been 
   the case if there existed numerous duplicated terms in each file split. Consider an extreme case where all the file splits
   contain duplicates of a token and that token only; Mappers would iterate over `tokens` twice (first for aggregation, then for emitting)
-   only to produce the same key-value pairs as what Mappers without the pattern would produce by iterating `tokens` only once. 
+   only to produce the same key-value pairs as what simple Mappers would produce by iterating `tokens` only once. 
    In this case, mappers with In-mapper Aggregation pattern would in fact take twice the time the simper one would take.
 
 
 
 ## References
 - Manning, D Christopher et al., 2008,  *Introduction to Information Retrieval*, viewed 23rd November 2020, <https://nlp.stanford.edu/IR-book/html/htmledition/positional-indexes-1.html>
-- Nenadic, Goran, 2020, *Preparing to Index*, lecture notes, COMP38211, University of Manchester
-- Nenadic, Goran, 2020, *Querying and ranking: Ranked retrieval*, COMP38211, University of Manchester
-- Nenadic, Goran, 2020 *Principles of IR – Indexing*, COMP38211, University of Manchester
-- Paton, Norman et al., 2020, *Map Reduce Design Patterns*, COMP382111, University of Manchester
+- Nenadic, Goran, 2020, *Preparing to Index*, lecture notes, COMP38211, UOM
+- Nenadic, Goran, 2020, *Querying and ranking: Ranked retrieval*, COMP38211, UOM
+- Nenadic, Goran, 2020 *Principles of IR – Indexing*, COMP38211, UOM
+- Paton, Norman et al., 2020, *Map Reduce Design Patterns*, COMP382111, UOM

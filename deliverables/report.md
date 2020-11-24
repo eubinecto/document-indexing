@@ -4,7 +4,7 @@
 - word count : 834 (assume 100 less words)
 
 ## Functionality
-### tokenisation Case folding
+### Tokenisation & case folding
   - selective folding -> I'm not doing this, no.
      - pros: ??? when would you need this though? when would you not want to lower all cases? 
   - lowering all cases (both for index and query)
@@ -23,25 +23,23 @@ Stop-words filtering is implemented in line 86 and 161 of the code. Stop-words a
  such as "my", "is" and "the". In the code, they are filtered out in the tokenisation process as
   they may hold (Nenadic, 2020) low semantic significance. While this might be helpful for denoising search query,
    there is a domain-specific downside to this. When people search for a particular episode, one might search for a 
-   memorable quote from the episode, say, "I did mean it", but the three terms would not have been indexed
-    as they are all listed as stop-words in `lib/stopwords.txt`. Although none of the Simpson episode wiki's include the
-    quote, but if they did, searching the quote would return nothing. 
+   memorable quote from the episode, say, "I did mean it". However, the three terms would not be indexed
+    as all of them are listed as Stop-words in `lib/stopwords.txt`. Although none of the Simpson episode wiki's
+     include the quote, but if they did, searching the quote would return nothing. 
     
  
-### stemming
+### Stemming
   - how? do you stem all the words? or do conditional stemming?
   - pros: ??
   - cons: ??
 
 
 ### Domain-specific filtering
- - how?  -> Using regular expressions. They are implemented as chained java stream filters. in line..(.. 
- - what? -> s
-    - filtering out numbers.
-    - filtering out isbn.
-    - filtering out dates.
- - why? -> the domain of the data matters (tokenisation - slide  9), because.. punctuation
- - limitations -> e.g. Not good if numbers are used as Proper Noun (e.g. the book 1984).
+Filtering out date, url, ISBN, numbers and page numbers is implemented in line 79-83 of the code. Wikipedia pages include
+ in-line citations and "References" section, both of which are not worthy of indexing simply because rarely would people use
+ them to search for an episode. They might be worthy if we were building an index for a book search engine however, as people
+might want to find books by an ISBN number, or jump into a specific page in a book. This illustrates that tokenisation process
+ depends (Nenadic, 2020) on the domain of the data. 
 
 
 ### Document Frequency (DF) and Term Frequency (TF)
@@ -105,6 +103,8 @@ In-mapper Aggregation pattern, where aggregation of values takes place (Paton et
 - (Christopher D. Manning, et.al, 2008) , *Introduction to Information Retrieval*
   - entry: https://nlp.stanford.edu/IR-book/html/htmledition/irbook.html
   - positional indexing: https://nlp.stanford.edu/IR-book/html/htmledition/positional-indexes-1.html
+- Nenadic, Goran. 2020 *Preparing to Index*
+  - link: https://online.manchester.ac.uk/bbcswebdav/pid-11983753-dt-content-rid-51278176_1/courses/I3132-COMP-38211-1201-1SE-039876/Workshop-02-01%283%29.pdf
 - Nenadic, Goran. 2020, *Querying and ranking: Ranked retrieval*
   - link: https://online.manchester.ac.uk/bbcswebdav/pid-12081152-dt-content-rid-55239820_1/courses/I3132-COMP-38211-1201-1SE-039876/Workshop-04-02.pdf
 - Nenadic, Goran. 2020 *Principles of IR – Indexing*

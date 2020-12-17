@@ -22,9 +22,9 @@ might want to find books by their ISBNs, or jump into a specific page in a book.
 > *Figure 1* : The formula for TF-IDF weight of a term (Nenadic, 2020).  
      
 > ```
-> allow|2	[Bart_the_Fink.txt.gz|3|[423, 548, 603], ...]
-> alter|2	[Bart_the_Fink.txt.gz|2|[782, 967], ...]
-> air|6	[Bart_the_Fink.txt.gz|3|[147, 205, 220]
+> allow|2	[Bart_the_Fink.txt.gz|3|[423, 548, 603], Bart_the_Lover.txt.gz|1|[581]]]
+> alter|2	[Bart_the_Fink.txt.gz|2|[782, 967], Bart_the_Lover.txt.gz|2|[155, 329]]
+> air|6	[Bart_the_Fink.txt.gz|3|[147, 205, 220, ...]
 > ```
 > *Figure 2* : Parts of the Inverted Index for the terms `allow` , `alter` and `american`.
 >  DF (next to the term), TF (next to the document) and positional indices (next to TF) are stored. 

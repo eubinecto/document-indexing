@@ -193,6 +193,10 @@ public class BasicInvertedIndex extends Configured implements Tool {
             VALUE.clear();
             LINE_TERM_FREQ.clear();
             LINE_TERM_POSITIONS.clear();
+            // TODO here, the poisitional index is incorrect. Because you are tokenizing them first.
+            // TODO: This is the way you should have done it!
+            // TODO: make sure you don't tokenize them before you calculate positional index.
+            long start_idx = ((FileSplit) context.getInputSplit()).getStart();
             // get a counter with doc_id as both the group name and counter name
             // this will be globally shared among mapper operations with the same doc id
             Counter counter = context.getCounter(INPUT_FILE.toString(), INPUT_FILE.toString());
@@ -215,8 +219,7 @@ public class BasicInvertedIndex extends Configured implements Tool {
                     positions = new ArrayList<>();
                     positions.add(counter.getValue());
                     LINE_TERM_POSITIONS.put(term, positions);
-                }
-                counter.increment(1);
+                }counter.increment(1);
             } // for each tokenized term
         } // inMapperAggregation
 
@@ -307,6 +310,8 @@ public class BasicInvertedIndex extends Configured implements Tool {
 
         public static void emitIndex(String term, Context context)
                 throws IOException, InterruptedException {
+            // TODO: should have done flagging for important terms.
+            // by actually getting TF * IDF.
             int lineTermFreq;
             String docId;
             ArrayList<Integer> positionalIndex;

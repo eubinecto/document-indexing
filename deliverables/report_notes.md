@@ -13,3 +13,6 @@ come up with a motivation for every feature you put in. Don't forget to be criti
 - collect all the output variations, and show different search results for the same query
 - make sure you cite the slides!
 - as for word count, just use `wc` command in terminal.
+
+
+
